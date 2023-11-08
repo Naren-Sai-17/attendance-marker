@@ -1,4 +1,5 @@
 
+
 from deepface import DeepFace
 import numpy as np 
 import os
@@ -85,6 +86,38 @@ def update_pdf(date):
     elements = [table]
     doc.build(elements)
 
+def update_tot(date,roll_numbers):
+    dict1 = {}
+
+    with open('sheets/total_attendance.csv', mode='r') as file:
+        csv_reader = csv.DictReader(file)
+        for row in csv_reader:
+            roll_number = row['Roll number']
+            dict1[roll_number] = int(row['Attendance'])
+    dir = f'sheets/{date}.csv'
+    dir2 = 'sheets/total_attendance.csv'
+    if not os.path.exists(dir):
+        shutil.copyfile('sheets/reference.csv', dir)
+    sheet = pd.read_csv(dir,dtype = str)
+    sheet2 = pd.read_csv(dir2,dtype = str)
+    print(roll_numbers)
+    for roll_number in roll_numbers:
+        # print(roll_number)
+        rno = '22000' + roll_number
+        print(rno)
+        if not sheet.loc[sheet['Roll number'] == (rno) , 'Status' ].iloc[0] == 'Present':
+            dict1[rno]+=1
+    for row in sheet2.iterrows():
+        row[1]['Attendance']=dict1[row[1]['Roll number']]
+    sheet2.to_csv(dir2, index=False)
+    
+    # print(roll_numbers)
+    print(dict1)
+            
+            
+    # sheet.to_csv(f'sheets/{date}.csv',index=False)
+    
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -105,6 +138,8 @@ def process_image():
         file.save(filepath)
         date = request.form.get('date')
         roll_numbers = get_roll_numbers(filepath)
+        # print(list(set(roll_numbers)))
+        update_tot(date,list(set(roll_numbers)))
         update_csv(date,roll_numbers)
         update_pdf(date) 
         return redirect("/")
@@ -131,4 +166,4 @@ def download_xls():
 
 if __name__ == '__main__':
     app.debug = True
-    app.run()
+    app.run(host = '0.0.0.0', port = 5000)
