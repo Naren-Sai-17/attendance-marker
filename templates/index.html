@@ -5,7 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attendance-Marker</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/flowbite/1.8.1/datepicker.min.js"></script>
+    <style>
+        body::-webkit-scrollbar {
+            width: 10px; 
+        }
+        
+        body::-webkit-scrollbar-thumb {
+            background-color: rgba(106, 25, 212, 0.7);
+            border-radius: 9999px;
+        }
+        
+        body::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(106, 25, 212, 0.9);
+            width: 11px;
+        }
+        
+        body::-webkit-scrollbar-track {
+            background-color: rgba(30, 41, 59);
+            /* color: rgb(255, 115, 0); */
+        }
+        
+    </style>
 </head>
 
 <body class="bg-slate-600 md:px-[10%]">
@@ -141,7 +163,36 @@
             </div>
         </div>   
     </div>
+    <div class="container mx-auto mt-8">
+        <h1 class="text-2xl text-white text-center font-semibold mb-4">CSV Data Table</h1>
+        <div class="w-[100%]">
+            <table class="w-full  bg-gray-700 shadow-md rounded my-6 text-white ">
+                <thead>
+                    <tr class="text-left bg-gray-800">
+                        <th class="border-0 p-2">Roll number</th>
+                        <th class="border-0 p-2">Name</th>
+                        <th class="border-0 p-2">Attendance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for index, row in df.iterrows() %}
+                    <tr class="text-left border border-gray-500 p-2 hover:bg-gray-600">
+                        <td class="border-0 p-2">{{ row['Roll number'] }}</td>
+                        <td class="border-0 p-2">{{ row['Name'] }}</td>
+                        <td class="border-0 p-2">{{ row['Attendance'] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+        </div>
+    </div>
+
+
 </div>
+
+<!--<iframe src="http://127.0.0.1:5000/docs" style="overflow: hidden" width="100%" height="500" >-->
+
     
 </body>
 <script>

@@ -1,10 +1,11 @@
 
+
 from deepface import DeepFace
 import numpy as np 
 import os
 import csv
 import shutil
-from flask import Flask,request, redirect, render_template, send_file
+from flask import Flask,request, redirect, render_template, send_file,make_response
 from werkzeug.utils import secure_filename
 import json
 from reportlab.lib.pagesizes import letter
@@ -85,9 +86,89 @@ def update_pdf(date):
     elements = [table]
     doc.build(elements)
 
+def update_tot(date,roll_numbers):
+    dict1 = {}
+
+    with open('sheets/total_attendance.csv', mode='r') as file:
+        csv_reader = csv.DictReader(file)
+        for row in csv_reader:
+            roll_number = row['Roll number']
+            dict1[roll_number] = int(row['Attendance'])
+    dir = f'sheets/{date}.csv'
+    dir2 = 'sheets/total_attendance.csv'
+    if not os.path.exists(dir):
+        shutil.copyfile('sheets/reference.csv', dir)
+    sheet = pd.read_csv(dir,dtype = str)
+    sheet2 = pd.read_csv(dir2,dtype = str)
+    print(roll_numbers)
+    for roll_number in roll_numbers:
+        # print(roll_number)
+        rno = '22000' + roll_number
+        # print(rno)
+        if not sheet.loc[sheet['Roll number'] == (rno) , 'Status' ].iloc[0] == 'Present':
+            dict1[rno]+=1
+    for row in sheet2.iterrows():
+        row[1]['Attendance']=dict1[row[1]['Roll number']]
+    sheet2.to_csv(dir2, index=False)
+    
+    # print(roll_numbers)
+    # print(dict1)
+    
+def update_tot_pdf():
+    sheet_path = 'sheets/total_attendance_null.csv'
+    pdf_path = 'pdfs/total_attendance.pdf'
+    df = pd.read_csv(sheet_path)
+    if os.path.exists(pdf_path):
+        os.remove(pdf_path)
+    doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+    data = [df.columns.tolist()] + df.values.tolist()
+    table = Table(data)
+    list1=[('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                        ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.black)]
+    c = 0
+    for row in df.iterrows():
+        c+=1
+        status=row[1][-1]   
+        # print(status)
+        if status==0:
+            # print('entered')
+            list1.append((('BACKGROUND', (2,c), (2,c), colors.red)))
+    style = TableStyle(list1)
+    table.setStyle(style)
+    elements = [table]
+    doc.build(elements)
+            
+            
+    
+    
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    df = pd.read_csv('sheets/total_attendance.csv') 
+
+    # Convert the DataFrame to an HTML table
+    # html_table = df.to_html(classes='table table-striped', escape=False, index=False)
+    return render_template('index.html',df=df)
+
+
+# @app.route('/pdf')
+# def show_static_pdf():
+#     return send_file('pdfs/total_attendance.pdf', as_attachment=True)
+
+@app.route('/docs')
+def get_pdf():
+    with open('pdfs/total_attendance.pdf', 'rb') as pdf_file:
+        pdf_content = pdf_file.read()
+
+    response = make_response(pdf_content)
+    response.headers['Content-Type'] = 'applicat ion/pdf'
+    response.headers['Content-Disposition'] = 'inline; filename=total_attendance.pdf'
+    return response
 
 @app.route('/process', methods=['GET', 'POST'])
 def process_image():
@@ -105,8 +186,11 @@ def process_image():
         file.save(filepath)
         date = request.form.get('date')
         roll_numbers = get_roll_numbers(filepath)
+        # print(list(set(roll_numbers)))
+        update_tot(date,list(set(roll_numbers)))
         update_csv(date,roll_numbers)
         update_pdf(date) 
+        update_tot_pdf()
         return redirect("/")
 @app.route('/download-pdf', methods=['GET'])
 
@@ -131,4 +215,4 @@ def download_xls():
 
 if __name__ == '__main__':
     app.debug = True
-    app.run()
+    app.run(host = '0.0.0.0', port = 5000)
