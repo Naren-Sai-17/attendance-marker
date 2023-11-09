@@ -5,7 +5,7 @@ import numpy as np
 import os
 import csv
 import shutil
-from flask import Flask,request, redirect, render_template, send_file,make_response
+from flask import Flask, flash, request, redirect, render_template, send_file,make_response
 from werkzeug.utils import secure_filename
 import json
 from reportlab.lib.pagesizes import letter
@@ -174,44 +174,58 @@ def get_pdf():
 def process_image():
     print(request.files)
     if request.method == 'POST':
-        if 'file' not in request.files:
+        try:
+            if 'file' not in request.files:
+                flash('Error: Image not found. \nPlease upload an image.', 'error')
+                return redirect("/")
+            file = request.files['file']
+            if file.filename == '':
+                flash('Error: Image not found. \nPlease upload an image.', 'error')
+                return redirect("/")
+            if not allowed_file(file.filename):
+                flash('Error: Invalid image. \nPlease upload JPG, PNG or JPEG.', 'error')
+                return redirect("/")
+            filename = secure_filename(file.filename)
+            filepath = os.path.join('uploads/',filename)
+            file.save(filepath)
+            date = request.form.get('date')
+            roll_numbers = get_roll_numbers(filepath)
+            # print(list(set(roll_numbers)))
+            update_tot(date,list(set(roll_numbers)))
+            update_csv(date,roll_numbers)
+            update_pdf(date) 
+            update_tot_pdf()
+
+            flash('Attendance updated successfully!', 'success')
             return redirect("/")
-        file = request.files['file']
-        if file.filename == '':
-            return redirect("/")
-        if not allowed_file(file.filename):
-            return redirect("/")
-        filename = secure_filename(file.filename)
-        filepath = os.path.join('uploads/',filename)
-        file.save(filepath)
-        date = request.form.get('date')
-        roll_numbers = get_roll_numbers(filepath)
-        # print(list(set(roll_numbers)))
-        update_tot(date,list(set(roll_numbers)))
-        update_csv(date,roll_numbers)
-        update_pdf(date) 
-        update_tot_pdf()
-        return redirect("/")
+        except:
+            flash('Error processing image. Please try again.', 'error')
 @app.route('/download-pdf', methods=['GET'])
 
 def download_pdf():
-    file_path = "pdfs/" + str(request.args.get('date')) + ".pdf"
-    return send_file(
-        file_path,
-        as_attachment = True,
-        download_name = file_path,
-        mimetype='text/pdf'
-    )
+    try:
+        file_path = "pdfs/" + str(request.args.get('date')) + ".pdf"
+        return send_file(
+            file_path,
+            as_attachment = True,
+            download_name = file_path,
+            mimetype='text/pdf'
+        )
+    except:
+        flash('Error: file not found. \nReason: attendance not yet uploaded.', 'error')
 
 @app.route('/download-xls', methods=['GET'])
 def download_xls():
-    file_path = "sheets/" + str(request.args.get('date')) + ".csv"
-    return send_file(
-        file_path,
-        as_attachment = True,
-        download_name = file_path + ".csv",
-        mimetype='text/csv'
-    )
+    try:
+        file_path = "sheets/" + str(request.args.get('date')) + ".csv"
+        return send_file(
+            file_path,
+            as_attachment = True,
+            download_name = file_path + ".csv",
+            mimetype='text/csv'
+        )
+    except:
+        flash('Error: file not found. \nReason: attendance not yet uploaded.', 'error')
 
 if __name__ == '__main__':
     app.debug = True
