@@ -115,7 +115,7 @@ def update_tot(date,roll_numbers):
     # print(dict1)
     
 def update_tot_pdf():
-    sheet_path = 'sheets/total_attendance_null.csv'
+    sheet_path = 'sheets/total_attendance.csv'
     pdf_path = 'pdfs/total_attendance.pdf'
     df = pd.read_csv(sheet_path)
     if os.path.exists(pdf_path):
